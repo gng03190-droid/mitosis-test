@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>체세포 분열 모형 탐구 · 서·논술형 수행평가</title>
+<style>
+  :root{
+    --ink:#16202b;
+    --ink-2:#4b5b6b;
+    --line:#d7dee5;
+    --paper:#f2f5f7;
+    --panel:#ffffff;
+    --teal:#12716a;
+    --teal-soft:#e3f1ef;
+    --red:#d24a3d;
+    --blue:#2d68c4;
+    --cell:#fdf1de;
+    --cell-edge:#e0bf8d;
+    --warn:#b9552a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",system-ui,sans-serif;
+    font-size:15px;
+    line-height:1.6;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
+
+  header.top{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-top:4px solid var(--teal);
+    padding:18px 20px;
+  }
+  header.top h1{margin:0;font-size:24px;letter-spacing:-.4px}
+  header.top p.std{margin:6px 0 0;color:var(--ink-2);font-size:13.5px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+  .meta label{font-size:13px;color:var(--ink-2)}
+  .meta input{
+    font:inherit;font-size:14px;padding:6px 9px;border:1px solid var(--line);
+    background:#fbfcfd;color:var(--ink);width:104px;border-radius:2px;
+  }
+  .meta input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+
+  /* 단계 이동 */
+  /* 복주머니 제비뽑기 화면 */
+  .draw{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--teal);padding:30px 20px 34px;text-align:center}
+  .draw h1{margin:0;font-size:27px;letter-spacing:-.5px}
+  .draw .lead{margin:10px auto 0;max-width:470px;color:var(--ink-2);font-size:14.5px}
+  .draw .metarow{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:18px}
+  .draw .metarow label{font-size:13px;color:var(--ink-2)}
+  .draw .metarow input{font:inherit;font-size:14px;padding:6px 9px;border:1px solid var(--line);background:#fbfcfd;width:104px;border-radius:2px;color:var(--ink)}
+  .bag{background:none;border:0;padding:0;margin:20px 0 0;cursor:pointer;line-height:0;display:inline-block}
+  .bag svg{width:168px;height:auto;display:block;transition:transform .18s ease}
+  .bag:hover svg{transform:translateY(-4px)}
+  .bag:disabled{cursor:default}
+  .bag:disabled svg{transform:none;opacity:.5}
+  @keyframes bagshake{
+    0%,100%{transform:rotate(0) translateY(0)}
+    15%{transform:rotate(-7deg) translateY(-7px)}
+    35%{transform:rotate(6deg) translateY(-2px)}
+    55%{transform:rotate(-5deg) translateY(-8px)}
+    75%{transform:rotate(4deg) translateY(-1px)}
+    90%{transform:rotate(-2deg) translateY(-3px)}
+  }
+  .bag.shaking svg{animation:bagshake .62s ease-in-out}
+  .drawmsg{margin:14px 0 0;font-size:14.5px;color:var(--teal)}
+  .slips{display:flex;gap:16px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+  .slip{width:168px;min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+        border:1px dashed #c9d4dc;background:#fbfcfd;color:#c3ccd4;border-radius:3px;padding:14px 8px}
+  .slip .q{font-size:28px;font-weight:700;line-height:1}
+  .slip .no{font-size:12px}
+  .slip.filled{border:1px solid var(--teal);background:var(--teal-soft);color:var(--teal);
+               box-shadow:0 4px 12px rgba(18,113,106,.13);animation:slipout .5s cubic-bezier(.2,1.25,.4,1)}
+  .slip.filled b{font-size:22px;letter-spacing:-.4px;line-height:1.3}
+  .slip.filled span{font-size:12.5px;color:var(--ink-2)}
+  @keyframes slipout{
+    0%{opacity:0;transform:translateY(-46px) scale(.5) rotate(-10deg)}
+    62%{opacity:1;transform:translateY(4px) scale(1.04) rotate(2deg)}
+    100%{opacity:1;transform:none}
+  }
+  .drawbtns{display:flex;gap:10px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+  .drawbtns .go{font:inherit;font-size:15px;font-weight:700;padding:11px 22px;border:0;background:var(--teal);color:#fff;cursor:pointer;border-radius:2px}
+  .drawbtns .go:disabled{background:#c8d1d8;cursor:default}
+  .drawbtns .again{font:inherit;font-size:13px;padding:10px 15px;border:1px solid var(--line);background:#fbfcfd;cursor:pointer;border-radius:2px;color:var(--ink-2)}
+  .drawbtns .again:hover{border-color:var(--teal);color:var(--teal)}
+  .pool{margin:16px 0 0;font-size:12.5px;color:#8c98a4}
+  @media (prefers-reduced-motion:reduce){
+    .bag.shaking svg{animation:none}
+    .slip.filled{animation:none}
+    .bag svg{transition:none}
+  }
+  .assign{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+  .assign .who{font-size:14px;color:var(--ink)}
+  .assign .who b{color:var(--teal)}
+  .assign .sp{flex:1}
+  .assign .ghost-sm{font:inherit;font-size:12.5px;padding:5px 10px;border:1px solid var(--line);background:#fbfcfd;cursor:pointer;border-radius:2px;color:var(--ink-2)}
+  .assign .ghost-sm:hover{border-color:var(--teal);color:var(--teal)}
+  .feat{margin-bottom:8px}
+  .feat label{display:block;font-size:12.5px;color:var(--ink-2);margin-bottom:3px}
+  .feat textarea{min-height:58px}
+  .opt small.note{display:block;font-size:11.5px;color:#8c98a4;padding:2px 0 0}
+  nav.steps{display:flex;gap:6px;margin:16px 0 0;flex-wrap:wrap}
+  nav.steps button{
+    flex:1 1 150px;min-width:120px;text-align:left;
+    background:var(--panel);border:1px solid var(--line);border-bottom:3px solid var(--line);
+    padding:9px 11px;font:inherit;color:var(--ink-2);cursor:pointer;border-radius:2px;
+  }
+  nav.steps button b{display:block;font-size:15.5px;color:var(--ink);letter-spacing:-.2px}
+  nav.steps button span{font-size:11.5px}
+  nav.steps button[aria-current="true"]{border-bottom-color:var(--teal);background:var(--teal-soft);color:var(--teal)}
+  nav.steps .dots{margin-top:3px;font-size:11px;letter-spacing:2px;color:#a9b6c2}
+  nav.steps .dots i{font-style:normal}
+  nav.steps .dots i.on{color:var(--teal)}
+
+  .board{display:grid;grid-template-columns:230px 1fr;gap:14px;margin-top:14px}
+  @media (max-width:880px){.board{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--line);padding:14px}
+  .card h2{margin:0 0 10px;font-size:14px;color:var(--teal);letter-spacing:-.2px}
+  .card h2 small{color:var(--ink-2);font-weight:400;margin-left:6px;font-size:11.5px}
+
+  .rule{border:1px solid #cfe3e0;background:var(--teal-soft);color:var(--teal);
+        padding:9px 11px;font-size:12.5px;line-height:1.55;margin:0 0 10px;border-radius:2px}
+  .rule b{font-size:14px}
+  .rule .dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:baseline;margin:0 3px 0 6px}
+  .draw .rule{max-width:420px;margin:16px auto 0;text-align:left}
+  .palette{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .palette button{
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    background:#fbfcfd;border:1px solid var(--line);padding:6px 2px 5px;cursor:pointer;
+    font:inherit;font-size:11.5px;color:var(--ink);border-radius:2px;
+  }
+  .palette button:hover{border-color:var(--teal);background:var(--teal-soft)}
+  .palette canvas{display:block}
+  .palette .lbl{line-height:1.25;text-align:center}
+
+  .opt{margin-top:6px}
+  .opt .row{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 0;border-top:1px dashed var(--line)}
+  .opt .row:first-child{border-top:0}
+  .opt .row span{font-size:13px;color:var(--ink-2)}
+  .seg{display:flex;border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .seg button{font:inherit;font-size:12px;padding:4px 8px;background:#fbfcfd;border:0;border-left:1px solid var(--line);cursor:pointer;color:var(--ink-2)}
+  .seg button:first-child{border-left:0}
+  .seg button[aria-pressed="true"]{background:var(--teal);color:#fff}
+
+  .stagearea{background:var(--panel);border:1px solid var(--line);padding:14px}
+  .tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+  .tools button{font:inherit;font-size:12.5px;padding:6px 10px;background:#fbfcfd;border:1px solid var(--line);cursor:pointer;color:var(--ink);border-radius:2px}
+  .tools button:hover{border-color:var(--teal);color:var(--teal)}
+  .tools button:disabled{opacity:.4;cursor:default}
+  .tools .sp{flex:1}
+  .count{font-size:12px;color:var(--ink-2)}
+  canvas#stage{width:100%;height:auto;display:block;border:1px solid var(--line);background:#fff;touch-action:none;cursor:grab}
+  canvas#stage.dragging{cursor:grabbing}
+  .tip{font-size:12.5px;color:var(--ink-2);margin:8px 2px 0}
+
+  .write{margin-top:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 8px}
+  .chips button{
+    font:inherit;font-size:12px;padding:3px 9px;border:1px solid var(--line);
+    background:#fbfcfd;cursor:pointer;color:var(--ink-2);border-radius:20px;
+  }
+  .chips button.used{background:var(--teal);border-color:var(--teal);color:#fff}
+  textarea{
+    width:100%;min-height:110px;font:inherit;font-size:14.5px;line-height:1.7;
+    padding:10px 12px;border:1px solid var(--line);background:#fbfcfd;color:var(--ink);
+    resize:vertical;border-radius:2px;
+  }
+  .navbtns{display:flex;gap:8px;margin-top:10px}
+  .navbtns button{font:inherit;font-size:13.5px;padding:8px 14px;border:1px solid var(--line);background:#fbfcfd;cursor:pointer;border-radius:2px}
+  .navbtns button:hover{border-color:var(--teal);color:var(--teal)}
+  .navbtns .sp{flex:1}
+
+  table.cmp{width:100%;border-collapse:collapse;margin-top:4px}
+  table.cmp th,table.cmp td{border:1px solid var(--line);padding:0}
+  table.cmp th{background:var(--teal-soft);color:var(--teal);font-size:13px;padding:7px 9px;text-align:left;width:auto}
+  table.cmp th.rowh{background:#f6f8f9;color:var(--ink);font-weight:600;width:150px;text-align:left}
+  table.cmp textarea{min-height:46px;border:0;background:transparent;padding:8px 10px;font-size:14px;line-height:1.55}
+  @media (max-width:640px){table.cmp th.rowh{width:96px;font-size:12.5px}}
+
+  .save{margin-top:14px;background:var(--panel);border:1px solid var(--line);padding:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .save .primary{
+    font:inherit;font-size:15px;font-weight:700;padding:11px 20px;border:0;
+    background:var(--teal);color:#fff;cursor:pointer;border-radius:2px;
+  }
+  .save .primary:hover{background:#0d5d57}
+  .save .ghost{font:inherit;font-size:13px;padding:9px 14px;border:1px solid var(--line);background:#fbfcfd;cursor:pointer;border-radius:2px}
+  .save .msg{font-size:13px;color:var(--teal-strong,var(--teal))}
+  .save .msg.warn{color:var(--warn)}
+  .rubric{margin-top:12px;font-size:12.5px;color:var(--ink-2);background:var(--panel);border:1px solid var(--line);padding:12px 14px}
+  .rubric b{color:var(--ink)}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <section class="draw" id="s-draw">
+    <h1>체세포 분열 수행평가</h1>
+    <p class="lead">복주머니에서 분열 단계 두 개를 뽑습니다. 뽑힌 단계를 염색체 모형으로 만들고, 그 시기의 특징을 2~3가지 쓰면 됩니다.</p>
+    <p class="rule"><b>모형 기준 · 2n = 2</b><br>
+      이 생물의 체세포에는 염색체가 2개 있습니다.
+      <span class="dot" style="background:#d24a3d"></span>어머니에게 받은 1개,
+      <span class="dot" style="background:#2d68c4"></span>아버지에게 받은 1개.
+      각 단계에 맞게 몇 개를 놓을지는 스스로 판단하세요.</p>
+    <div class="metarow">
+      <label for="m-cls">학년·반</label><input id="m-cls" placeholder="3-1">
+      <label for="m-no">번호</label><input id="m-no" placeholder="01">
+      <label for="m-name">이름</label><input id="m-name" placeholder="홍길동">
+    </div>
+      <button type="button" class="bag" id="bag" aria-label="복주머니에서 단계 뽑기">
+        <svg viewBox="0 0 200 252" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M70 70 C56 34 90 18 100 34" fill="none" stroke="#c9962f" stroke-width="4.5" stroke-linecap="round"/>
+          <path d="M130 70 C144 34 110 18 100 34" fill="none" stroke="#c9962f" stroke-width="4.5" stroke-linecap="round"/>
+          <circle cx="100" cy="31" r="8.5" fill="#e8c451" stroke="#b8802a" stroke-width="2.5"/>
+          <path d="M100 62 C52 62 22 102 22 150 C22 202 58 228 100 228 C142 228 178 202 178 150 C178 102 148 62 100 62 Z"
+                fill="#c8443c" stroke="#98301f" stroke-width="3"/>
+          <path d="M100 228 C70 228 46 210 34 186 C56 200 78 208 100 208 C122 208 144 200 166 186 C154 210 130 228 100 228 Z" fill="#b03a33"/>
+          <g fill="#f0d489" opacity=".95">
+            <circle cx="78" cy="146" r="5.5"/><circle cx="100" cy="132" r="5.5"/><circle cx="122" cy="146" r="5.5"/>
+            <circle cx="89" cy="170" r="5.5"/><circle cx="111" cy="170" r="5.5"/><circle cx="100" cy="192" r="5.5"/>
+          </g>
+          <path d="M66 58 L134 58 L130 84 L70 84 Z" fill="#a8332c" stroke="#8d2823" stroke-width="2.5"/>
+          <g stroke="#8d2823" stroke-width="2.2" opacity=".6">
+            <line x1="84" y1="60" x2="82" y2="82"/><line x1="100" y1="60" x2="100" y2="82"/><line x1="116" y1="60" x2="118" y2="82"/>
+          </g>
+          <rect x="58" y="76" width="84" height="18" rx="9" fill="#e8c451" stroke="#b8802a" stroke-width="2.8"/>
+          <g stroke="#e8c451" stroke-width="3.5" stroke-linecap="round">
+            <line x1="100" y1="228" x2="100" y2="245"/><line x1="91" y1="229" x2="87" y2="244"/><line x1="109" y1="229" x2="113" y2="244"/>
+          </g>
+        </svg>
+      </button>
+    <p class="drawmsg" id="drawmsg"></p>
+    <div class="slips" aria-live="polite">
+      <div class="slip" id="slip0"></div>
+      <div class="slip" id="slip1"></div>
+    </div>
+    <div class="drawbtns">
+      <button type="button" class="again" id="btn-redraw">처음부터 다시 뽑기</button>
+      <button type="button" class="go" id="btn-start" disabled>이 두 단계로 모형 만들기 →</button>
+    </div>
+    <p class="pool">간기 · 전기 · 중기 · 후기 · 말기 및 세포질 분열 &nbsp;다섯 장 중 두 장</p>
+  </section>
+
+  <div id="s-work" hidden>
+  <header class="top">
+    <h1>체세포 분열 모형 만들기</h1>
+    <p class="std">[9과21-02] 염색체와 유전자의 관계를 이해하고, 체세포 분열 과정과 생식세포 형성과정의 특징을 염색체의 행동을 중심으로 설명할 수 있다.</p>
+    <div class="assign">
+      <span class="who" id="assigntext"></span>
+      <span class="sp"></span>
+      <span class="who">식물세포 모형</span>
+      <button type="button" class="ghost-sm" id="btn-bag">복주머니 화면 보기</button>
+    </div>
+  </header>
+
+  <nav class="steps" id="steps" aria-label="분열 단계 선택"></nav>
+
+  <div class="board">
+    <aside class="card">
+      <h2>염색체 모형 <small>클릭해서 넣기</small></h2>
+      <p class="rule"><b>2n = 2</b> — 이 세포의 염색체는
+        <span class="dot" style="background:#d24a3d"></span>엄마 1개 +
+        <span class="dot" style="background:#2d68c4"></span>아빠 1개</p>
+      <div class="palette" id="palette"></div>
+
+      <div class="opt">
+        <h2 style="margin-top:14px">세포 상태</h2>
+        <div class="row"><span>핵막</span>
+          <span class="seg" id="seg-nuc">
+            <button type="button" data-v="0">없음</button>
+            <button type="button" data-v="1">1개</button>
+            <button type="button" data-v="2">2개</button>
+          </span>
+        </div>
+        <div class="row"><span>방추사</span>
+          <span class="seg" id="seg-spindle">
+            <button type="button" data-v="0">없음</button>
+            <button type="button" data-v="1">있음</button>
+          </span>
+        </div>
+        <div class="row"><span>세포질 분열</span>
+          <span class="seg" id="seg-cyto">
+            <button type="button" data-v="none">안 함</button>
+            <button type="button" data-v="mid">진행 중</button>
+            <button type="button" data-v="done">완성</button>
+          </span>
+        </div>
+        <small class="note" id="cytonote"></small>
+        <div class="row"><span>안내선</span>
+          <span class="seg" id="seg-guide">
+            <button type="button" data-v="0">끄기</button>
+            <button type="button" data-v="1">켜기</button>
+          </span>
+        </div>
+      </div>
+    </aside>
+
+    <section class="stagearea">
+      <div class="tools">
+        <button type="button" id="btn-rot-l" title="선택한 모형 왼쪽으로 회전">↺ 회전</button>
+        <button type="button" id="btn-rot-r" title="선택한 모형 오른쪽으로 회전">↻ 회전</button>
+        <button type="button" id="btn-copy">복제</button>
+        <button type="button" id="btn-del">삭제</button>
+        <span class="sp"></span>
+        <span class="count" id="count"></span>
+        <button type="button" id="btn-clear">이 단계 모형 비우기</button>
+      </div>
+      <canvas id="stage" width="1240" height="840" aria-label="세포 모형 작업 공간"></canvas>
+      <p class="tip">모형을 눌러 선택한 뒤 끌어서 옮기고, 방향은 회전 버튼으로 바꿉니다. 선택한 모형은 Delete 키로도 지울 수 있어요.</p>
+      <p class="tip" id="tip" style="color:var(--teal)"></p>
+
+      <div class="write">
+        <h2 style="margin:0 0 8px;font-size:14px;color:var(--teal)">이 단계의 특징을 염색체의 행동 중심으로 2~3가지 쓰기</h2>
+        <div class="chips" id="chips"></div>
+        <div id="feats"></div>
+        <div class="navbtns">
+          <button type="button" id="btn-prev">← 이전 단계</button>
+          <span class="sp"></span>
+          <button type="button" id="btn-next">다음 단계 →</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h2>체세포 분열과 생식세포 형성 과정(감수 분열) 비교 <small>보고서 3번 항목</small></h2>
+    <table class="cmp">
+      <thead><tr><th class="rowh">구분</th><th>체세포 분열</th><th>감수 분열</th></tr></thead>
+      <tbody id="cmpbody"></tbody>
+    </table>
+  </div>
+
+  <div class="save">
+    <button type="button" class="primary" id="btn-png">보고서 이미지 저장 (PNG)</button>
+    <button type="button" class="ghost" id="btn-reset">전체 지우고 새로 시작</button>
+    <span class="msg" id="savemsg"></span>
+  </div>
+
+  </div>
+
+  <p class="rubric" id="rubric">
+    <b>채점 기준</b> · 체세포 분열 표현 3점(모형이 정확한가) / 체세포 분열 특징 3점(염색체의 행동으로 설명했는가) / 감수 분열과의 비교 4점 &nbsp;—&nbsp; 총 10점<br>
+    저장한 PNG 파일을 제출하세요. 새로고침하면 작업 내용이 사라질 수 있으니 다 쓰면 바로 저장합니다.
+  </p>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ───────────── 상수 ───────────── */
+var W = 620, H = 420;                 // 논리 좌표계
+var CX = 310, CY = 210;               // 세포 중심
+var RX = 190, RY = 148;               // 세포 반지름
+var C = {
+  ink:"#16202b", ink2:"#4b5b6b", line:"#d7dee5", teal:"#12716a",
+  red:"#d24a3d", redDark:"#8e2b21", blue:"#2d68c4", blueDark:"#1b4380",
+  cell:"#fdf1de", cellEdge:"#e0bf8d", wall:"#9dbb84",
+  nuc:"#f6ecff", nucEdge:"#9c86c4", spindle:"#9aa7b3", plate:"#cfe6c4", paper:"#ffffff"
+};
+
+var STAGES = [
+  { id:"g", no:"1", name:"간기", sub:"분열 전",
+    tip:"유전 물질이 어떤 모습으로 어디에 있는지 생각하며 배치해 보세요. 이 시기에 일어나는 복제는 그림 대신 특징 설명에 쓰면 됩니다.",
+    keys:["핵막","염색사","복제","DNA","세포 크기"] },
+  { id:"p", no:"2", name:"전기", sub:"핵분열 1",
+    tip:"핵막과 염색체의 모습이 크게 바뀌는 시기예요. 염색체를 움직이게 할 구조물도 생각해 보세요.",
+    keys:["핵막","염색체","염색 분체","응축","방추사"] },
+  { id:"m", no:"3", name:"중기", sub:"핵분열 2",
+    tip:"염색체가 어디에 어떻게 놓이는지가 핵심이에요. 관찰하기 가장 좋은 시기이기도 합니다.",
+    keys:["중앙","적도면","배열","방추사","염색체"] },
+  { id:"a", no:"4", name:"후기", sub:"핵분열 3",
+    tip:"무엇이 무엇으로부터 분리되어, 어디로 이동하는지를 정확히 구분해서 표현해 보세요.",
+    keys:["염색 분체","분리","양극","이동","방추사"] },
+  { id:"t", no:"5", name:"말기 및 세포질 분열", sub:"핵분열 4 + 세포질",
+    tip:"핵이 다시 만들어지고 세포질이 나누어져요. 식물세포에서 세포질이 어떤 방식으로 나누어지는지도 써 보세요.",
+    keys:["핵막","염색사","세포질 분열","딸세포","세포판","세포막"] }
+];
+
+var CMP_ROWS = [
+  { k:"분열 장소", ph1:"동물: / 식물:", ph2:"동물: / 식물:" },
+  { k:"분열 횟수", ph1:"", ph2:"" },
+  { k:"딸세포 수", ph1:"", ph2:"" },
+  { k:"2가 염색체", ph1:"", ph2:"" },
+  { k:"염색체 수의 변화", ph1:"모세포와 비교해서", ph2:"모세포와 비교해서" },
+  { k:"분열 결과와 의의", ph1:"", ph2:"" }
+];
+
+/* ───────────── 상태 ───────────── */
+var state = null;
+function blankStage(){ return { objs:[], nuc:1, spindle:0, cyto:"none", texts:["","",""] }; }
+function pickTwo(){
+  var pool=[0,1,2,3,4], a=pool.splice(Math.floor(Math.random()*pool.length),1)[0];
+  var b=pool[Math.floor(Math.random()*pool.length)];
+  return [a,b].sort(function(x,y){ return x-y; });
+}
+function blankState(){
+  var s = { meta:{cls:"",no:"",name:""}, cellType:"plant", cur:0, guide:0,
+            mode:"random2", picks:[], drawn:false, stages:{}, cmp:[] };
+  STAGES.forEach(function(st){ s.stages[st.id] = blankStage(); });
+  CMP_ROWS.forEach(function(){ s.cmp.push(["",""]); });
+  return s;
+}
+state = blankState();
+var uid = 1, sel = null;
+
+function activeIdx(){
+  var p = (state.picks||[]).slice().sort(function(a,b){ return a-b; });
+  return (p.length<2) ? [0,1,2,3,4] : p;
+}
+function curIdx(){ var a=activeIdx(); return a[Math.min(state.cur, a.length-1)]; }
+function cur(){ return state.stages[STAGES[curIdx()].id]; }
+function curStage(){ return STAGES[curIdx()]; }
+var MARK = ["①","②","③"];
+
+/* ───────────── 모형 그리기 ───────────── */
+function chromColor(o){ return o.color === "r" ? C.red : C.blue; }
+function chromDark(o){ return o.color === "r" ? C.redDark : C.blueDark; }
+
+function pathWave(ctx, off, len, amp){
+  ctx.beginPath();
+  for(var i=0;i<=24;i++){
+    var t = i/24, x = -len/2 + len*t, y = off + amp*Math.sin(t*Math.PI*3.1);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+}
+
+function shapeChromosome(ctx, col, dark){
+  ctx.lineCap="round"; ctx.lineWidth=13; ctx.strokeStyle=col;
+  ctx.beginPath(); ctx.moveTo(-15,-31); ctx.bezierCurveTo(-3,-13,-3,13,-15,31); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(15,-31); ctx.bezierCurveTo(3,-13,3,13,15,31); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-6,0); ctx.lineTo(6,0); ctx.lineWidth=9; ctx.stroke();
+  ctx.beginPath(); ctx.arc(0,0,4.2,0,Math.PI*2); ctx.fillStyle=dark; ctx.fill();
+}
+function shapeChromatid(ctx, col, dark){
+  ctx.lineCap="round"; ctx.lineJoin="round"; ctx.lineWidth=12; ctx.strokeStyle=col;
+  ctx.beginPath(); ctx.moveTo(14,-27); ctx.lineTo(-7,0); ctx.lineTo(14,27); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-7,0,4,0,Math.PI*2); ctx.fillStyle=dark; ctx.fill();
+}
+function shapeChromatin(ctx, col, dark){
+  // 실뭉치처럼 뒤엉킨 염색사
+  ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle=col; ctx.lineWidth=3.2;
+  var loops = [[0, 1, 3], [0.9, 0.82, 4], [1.9, 0.62, 5]];
+  loops.forEach(function(L){
+    ctx.beginPath();
+    for(var i=0;i<=140;i++){
+      var t = i/140*Math.PI*2;
+      var r = 27*L[1]*(1 + 0.40*Math.sin(L[2]*t + L[0]*2)) * (1 + 0.10*Math.cos(2*t));
+      var x = r*Math.cos(t+L[0]), y = r*0.82*Math.sin(t+L[0]);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  });
+}
+
+function drawShape(ctx, type, col, dark){
+  if(type==="chromosome") shapeChromosome(ctx,col,dark);
+  else if(type==="chromatid") shapeChromatid(ctx,col,dark);
+  else shapeChromatin(ctx,col,dark);
+}
+
+function drawObj(ctx, o){
+  ctx.save();
+  ctx.translate(o.x,o.y);
+  ctx.rotate(o.rot*Math.PI/180);
+  drawShape(ctx, o.type, chromColor(o), chromDark(o));
+  ctx.restore();
+}
+
+function hitR(type){ return type==="chromatin" ? 40 : 34; }
+
+/* ───────────── 세포 그리기 ───────────── */
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+function cellPath(ctx, type){
+  ctx.beginPath();
+  if(type==="plant"){
+    var x=CX-RX, y=CY-RY, w=RX*2, h=RY*2, r=26;
+    ctx.moveTo(x+r,y);
+    ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+  } else {
+    ctx.ellipse(CX,CY,RX,RY,0,0,Math.PI*2);
+  }
+}
+
+function drawCell(ctx, st, cellType){
+  // 몸체
+  cellPath(ctx, cellType);
+  ctx.fillStyle = C.cell; ctx.fill();
+  ctx.lineWidth = cellType==="plant" ? 6 : 3.4;
+  ctx.strokeStyle = cellType==="plant" ? C.wall : C.cellEdge;
+  ctx.stroke();
+  if(cellType==="plant"){
+    ctx.save(); ctx.lineWidth=1.6; ctx.strokeStyle="#ffffff";
+    cellPath(ctx,"plant"); ctx.stroke(); ctx.restore();
+  }
+
+  // 세포질 분열
+  if(st.cyto && st.cyto!=="none"){
+    var done = st.cyto==="done";
+    if(cellType==="plant"){
+      ctx.save();
+      cellPath(ctx,"plant"); ctx.clip();
+      var half = done ? RY : RY*0.42;
+      // 세포판 본체 (가운데에서 만들어져 바깥쪽으로 자람)
+      ctx.fillStyle = C.plate;
+      ctx.fillRect(CX-9, CY-half, 18, half*2);
+      ctx.strokeStyle = "#6f9c5c"; ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(CX-9, CY-half); ctx.lineTo(CX-9, CY+half);
+      ctx.moveTo(CX+9, CY-half); ctx.lineTo(CX+9, CY+half);
+      ctx.stroke();
+      if(!done){
+        // 형성 중: 세포벽 쪽으로 이어지는 소포
+        ctx.fillStyle="#bcdda8"; ctx.strokeStyle="#6f9c5c"; ctx.lineWidth=1.4;
+        for(var k=0;k<4;k++){
+          var off = half + 16 + k*19, rr = 7 - k*1.1;
+          [CY-off, CY+off].forEach(function(yy){
+            ctx.beginPath();
+            ctx.arc(CX + (k%2 ? 6 : -6), yy, rr, 0, Math.PI*2);
+            ctx.fill(); ctx.stroke();
+          });
+        }
+      } else {
+        // 완성: 두 딸세포 사이의 새 세포벽
+        ctx.strokeStyle="rgba(111,156,92,.55)"; ctx.lineWidth=1.4;
+        ctx.beginPath(); ctx.moveTo(CX, CY-RY); ctx.lineTo(CX, CY+RY); ctx.stroke();
+      }
+      ctx.restore();
+    } else {
+      var r = done ? 62 : 32;
+      ctx.save();
+      ctx.fillStyle=C.paper;
+      ctx.beginPath(); ctx.arc(CX,CY-RY+4,r,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(CX,CY+RY-4,r,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle=C.cellEdge; ctx.lineWidth=3.4;
+      ctx.beginPath(); ctx.arc(CX,CY-RY+4,r,0,Math.PI); ctx.stroke();
+      ctx.beginPath(); ctx.arc(CX,CY+RY-4,r,Math.PI,Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // 방추사
+  if(st.spindle){
+    ctx.save();
+    cellPath(ctx,cellType); ctx.clip();
+    ctx.strokeStyle="rgba(140,152,164,.75)"; ctx.lineWidth=1.5;
+    [[CX-RX+16,CY],[CX+RX-16,CY]].forEach(function(p){
+      for(var i=-4;i<=4;i++){
+        ctx.beginPath(); ctx.moveTo(p[0],p[1]);
+        ctx.quadraticCurveTo((p[0]+CX)/2, CY+i*13, CX, CY+i*27);
+        ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(p[0],p[1],6,0,Math.PI*2);
+      ctx.fillStyle=C.spindle; ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  // 핵막
+  if(st.nuc>0){
+    var spots = st.nuc===1 ? [[CX,CY,104,84]] : [[CX-95,CY,80,70],[CX+95,CY,80,70]];
+    spots.forEach(function(s){
+      ctx.beginPath(); ctx.ellipse(s[0],s[1],s[2],s[3],0,0,Math.PI*2);
+      ctx.fillStyle="rgba(246,236,255,.72)"; ctx.fill();
+      ctx.lineWidth=3; ctx.strokeStyle=C.nucEdge; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(s[0],s[1],s[2]-5,s[3]-5,0,0,Math.PI*2);
+      ctx.lineWidth=1.2; ctx.strokeStyle="rgba(156,134,196,.6)"; ctx.stroke();
+    });
+  }
+}
+
+function drawScene(ctx, st, cellType, opt){
+  opt = opt || {};
+  ctx.save();
+  ctx.fillStyle = C.paper; ctx.fillRect(0,0,W,H);
+  if(opt.guide){
+    ctx.save(); ctx.strokeStyle="#c9d6dd"; ctx.setLineDash([6,6]); ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.moveTo(CX,18); ctx.lineTo(CX,H-18); ctx.stroke();
+    ctx.setLineDash([]); ctx.fillStyle="#a9b6c2"; ctx.font="12px sans-serif";
+    ctx.fillText("적도면(중앙)", CX+6, 30);
+    ctx.fillText("양극", 20, CY-6); ctx.fillText("양극", W-46, CY-6);
+    ctx.restore();
+  }
+  drawCell(ctx, st, cellType);
+  st.objs.forEach(function(o){ drawObj(ctx,o); });
+  ctx.restore();
+}
+
+/* ───────────── 화면 캔버스 ───────────── */
+var canvas = document.getElementById("stage");
+var ctx = canvas.getContext("2d");
+var DPR = Math.min(window.devicePixelRatio||1, 2);
+function sizeCanvas(){
+  canvas.width = Math.round(W*DPR);
+  canvas.height = Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+sizeCanvas();
+
+function render(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  drawScene(ctx, cur(), state.cellType, {guide:state.guide});
+  if(sel){
+    var o = findObj(sel);
+    if(o){
+      var r = hitR(o.type);
+      ctx.save();
+      ctx.strokeStyle=C.teal; ctx.setLineDash([5,4]); ctx.lineWidth=1.6;
+      ctx.strokeRect(o.x-r, o.y-r, r*2, r*2);
+      ctx.restore();
+    }
+  }
+  updateCount();
+  drawSteps();
+}
+
+function findObj(id){
+  var a = cur().objs;
+  for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i];
+  return null;
+}
+
+function pointerPos(e){
+  var r = canvas.getBoundingClientRect();
+  return { x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height) };
+}
+
+var drag = null;
+canvas.addEventListener("pointerdown", function(e){
+  var p = pointerPos(e), a = cur().objs, found=null;
+  for(var i=a.length-1;i>=0;i--){
+    var o=a[i], r=hitR(o.type);
+    if(Math.abs(p.x-o.x)<=r && Math.abs(p.y-o.y)<=r){ found=o; break; }
+  }
+  if(found){
+    sel = found.id;
+    // 맨 위로
+    a.splice(a.indexOf(found),1); a.push(found);
+    drag = { dx:p.x-found.x, dy:p.y-found.y };
+    canvas.classList.add("dragging");
+    canvas.setPointerCapture(e.pointerId);
+  } else { sel=null; }
+  render();
+});
+canvas.addEventListener("pointermove", function(e){
+  if(!drag || !sel) return;
+  var p = pointerPos(e), o = findObj(sel);
+  if(!o) return;
+  o.x = Math.max(24, Math.min(W-24, p.x-drag.dx));
+  o.y = Math.max(24, Math.min(H-24, p.y-drag.dy));
+  render();
+});
+function endDrag(e){
+  if(drag){ drag=null; canvas.classList.remove("dragging"); save(); }
+}
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+canvas.addEventListener("dblclick", function(){ if(sel){ rotate(45); } });
+
+document.addEventListener("keydown", function(e){
+  var tag=(e.target.tagName||"").toLowerCase();
+  if(tag==="textarea"||tag==="input") return;
+  if(!sel) return;
+  if(e.key==="Delete"||e.key==="Backspace"){ e.preventDefault(); delSel(); }
+  else if(e.key==="["){ rotate(-15); }
+  else if(e.key==="]"){ rotate(15); }
+  else if(e.key.indexOf("Arrow")===0){
+    var o=findObj(sel); if(!o) return; e.preventDefault();
+    var d = e.shiftKey?10:2;
+    if(e.key==="ArrowLeft") o.x-=d; if(e.key==="ArrowRight") o.x+=d;
+    if(e.key==="ArrowUp") o.y-=d; if(e.key==="ArrowDown") o.y+=d;
+    render(); save();
+  }
+});
+
+function rotate(d){ var o=findObj(sel); if(!o) return; o.rot=(o.rot+d+360)%360; render(); save(); }
+function delSel(){
+  var a=cur().objs, o=findObj(sel); if(!o) return;
+  a.splice(a.indexOf(o),1); sel=null; render(); save();
+}
+function addObj(type,color,x,y){
+  var o = { id:uid++, type:type, color:color,
+            x:x||(CX + (Math.random()*90-45)), y:y||(CY + (Math.random()*90-45)), rot:0 };
+  cur().objs.push(o); sel=o.id; render(); save();
+}
+
+document.getElementById("btn-rot-l").onclick=function(){ rotate(-15); };
+document.getElementById("btn-rot-r").onclick=function(){ rotate(15); };
+document.getElementById("btn-del").onclick=delSel;
+document.getElementById("btn-copy").onclick=function(){
+  var o=findObj(sel); if(!o) return;
+  addObj(o.type,o.color,o.x+34,o.y+34);
+  var n=findObj(sel); if(n) n.rot=o.rot;
+  render(); save();
+};
+document.getElementById("btn-clear").onclick=function(){
+  if(!cur().objs.length) return;
+  if(confirm("이 단계에 배치한 모형을 모두 지울까요?")){ cur().objs=[]; sel=null; render(); save(); }
+};
+
+function updateCount(){
+  var c={chromosome:0,chromatid:0,chromatin:0};
+  cur().objs.forEach(function(o){ if(c[o.type]!==undefined) c[o.type]++; });
+  var parts=[];
+  if(c.chromosome) parts.push("염색체 "+c.chromosome);
+  if(c.chromatid) parts.push("염색 분체 "+c.chromatid);
+  if(c.chromatin) parts.push("염색사 "+c.chromatin);
+  document.getElementById("count").textContent = parts.length ? "배치: "+parts.join(" · ") : "배치한 모형 없음";
+  var has = !!findObj(sel);
+  ["btn-rot-l","btn-rot-r","btn-copy","btn-del"].forEach(function(id){ document.getElementById(id).disabled = !has; });
+}
+
+/* ───────────── 팔레트 ───────────── */
+var PAL = [
+  { type:"chromatin",  color:"r", label:"염색사\n(엄마)" },
+  { type:"chromatin",  color:"b", label:"염색사\n(아빠)" },
+  { type:"chromosome", color:"r", label:"염색체\n(엄마)" },
+  { type:"chromosome", color:"b", label:"염색체\n(아빠)" },
+  { type:"chromatid",  color:"r", label:"염색 분체\n(엄마)" },
+  { type:"chromatid",  color:"b", label:"염색 분체\n(아빠)" }
+];
+(function buildPalette(){
+  var box = document.getElementById("palette");
+  PAL.forEach(function(p){
+    var b = document.createElement("button");
+    b.type="button";
+    var cv = document.createElement("canvas");
+    cv.width=64; cv.height=52;
+    var c2 = cv.getContext("2d");
+    c2.translate(32,26); c2.scale(0.58,0.58);
+    drawShape(c2, p.type, p.color==="r"?C.red:C.blue, p.color==="r"?C.redDark:C.blueDark);
+    var lab = document.createElement("span");
+    lab.className="lbl";
+    lab.innerHTML = p.label.split("\n").join("<br>");
+    b.appendChild(cv); b.appendChild(lab);
+    b.onclick=function(){ addObj(p.type,p.color); };
+    box.appendChild(b);
+  });
+})();
+
+/* ───────────── 단계 UI ───────────── */
+function segBind(id, get, set){
+  var el = document.getElementById(id);
+  el.addEventListener("click", function(e){
+    var b = e.target && e.target.closest ? e.target.closest("button") : null;
+    if(!b) return;
+    set(b.dataset.v !== undefined ? b.dataset.v : b.dataset.cell);
+    syncSegs(); render(); save();
+  });
+}
+function paintSeg(id, val){
+  var el=document.getElementById(id);
+  Array.prototype.forEach.call(el.querySelectorAll("button"), function(b){
+    var v = b.dataset.v!==undefined ? b.dataset.v : b.dataset.cell;
+    b.setAttribute("aria-pressed", String(v)===String(val));
+  });
+}
+segBind("seg-nuc", null, function(v){ cur().nuc = parseInt(v,10); });
+segBind("seg-spindle", null, function(v){ cur().spindle = parseInt(v,10); });
+segBind("seg-cyto", null, function(v){ cur().cyto = v; });
+segBind("seg-guide", null, function(v){ state.guide = parseInt(v,10); });
+
+function syncSegs(){
+  paintSeg("seg-nuc", cur().nuc);
+  paintSeg("seg-spindle", cur().spindle);
+  paintSeg("seg-cyto", cur().cyto);
+  paintSeg("seg-guide", state.guide);
+  document.getElementById("cytonote").textContent =
+    "식물세포: 세포판이 안 → 바깥쪽으로 만들어집니다.";
+  var names = activeIdx().map(function(i){ return STAGES[i].name; }).join(" · ");
+  var who = [state.meta.cls, state.meta.no, state.meta.name].filter(function(v){ return v; }).join(" ");
+  document.getElementById("assigntext").innerHTML =
+    (who ? who+" · " : "") +
+    "뽑은 단계: <b>" + names + "</b>";
+}
+
+var navSig = "";
+function written(s){
+  return s.texts.filter(function(t){ return t.trim().length>=5; }).length;
+}
+function drawSteps(){
+  var nav = document.getElementById("steps");
+  var act = activeIdx(), sig = state.mode+":"+act.join(",");
+  if(sig !== navSig){
+    navSig = sig; nav.innerHTML = "";
+    act.forEach(function(gi,i){
+      var st = STAGES[gi];
+      var b=document.createElement("button"); b.type="button";
+      b.innerHTML = "<b>"+st.name+"</b><span class='dots'></span>";
+      b.onclick=function(){ go(i); };
+      nav.appendChild(b);
+    });
+  }
+  act.forEach(function(gi,i){
+    var b = nav.children[i], s = state.stages[STAGES[gi].id];
+    b.setAttribute("aria-current", String(i===state.cur));
+    var d1 = s.objs.length ? "on":"", d2 = written(s)>=2 ? "on":"";
+    b.querySelector(".dots").innerHTML = "<i class='"+d1+"'>●</i><i class='"+d2+"'>●</i>";
+  });
+}
+
+var lastField = null;
+function buildChips(){
+  var box=document.getElementById("chips"); box.innerHTML="";
+  var st=curStage(), txt=cur().texts.join(" ");
+  st.keys.forEach(function(k){
+    var b=document.createElement("button"); b.type="button"; b.textContent=k;
+    if(txt.indexOf(k)>=0) b.className="used";
+    b.onclick=function(){
+      var ta=lastField || document.querySelector("#feats textarea");
+      if(!ta) return;
+      var pos=ta.selectionStart, v=ta.value;
+      ta.value = v.slice(0,pos)+k+v.slice(pos);
+      ta.focus(); ta.selectionStart=ta.selectionEnd=pos+k.length;
+      cur().texts[parseInt(ta.dataset.i,10)] = ta.value;
+      buildChips(); drawSteps(); save();
+    };
+    box.appendChild(b);
+  });
+}
+function buildFeats(){
+  var box=document.getElementById("feats"); box.innerHTML="";
+  var st=curStage(), t=cur().texts;
+  MARK.forEach(function(mk,i){
+    var row=document.createElement("div"); row.className="feat";
+    var lab=document.createElement("label");
+    lab.textContent = "특징 "+mk+(i===2 ? "  (더 쓰고 싶으면)" : "");
+    var ta=document.createElement("textarea");
+    ta.dataset.i=i; ta.value=t[i]||"";
+    ta.placeholder = i===0 ? st.name+" 시기에 염색체는 어떻게 되나요?"
+                   : i===1 ? "핵막·방추사·세포질은 어떻게 되나요?"
+                           : "이 시기만의 특징을 한 가지 더";
+    ta.addEventListener("input", function(){
+      cur().texts[i]=ta.value; buildChips(); drawSteps(); save();
+    });
+    ta.addEventListener("focus", function(){ lastField=ta; });
+    row.appendChild(lab); row.appendChild(ta); box.appendChild(row);
+  });
+  lastField = box.querySelector("textarea");
+}
+
+function go(i, noScroll){
+  var n = activeIdx().length;
+  state.cur = Math.max(0, Math.min(n-1, i));
+  sel=null;
+  document.getElementById("tip").textContent = curStage().tip;
+  syncSegs(); buildFeats(); buildChips(); render(); save();
+  if(!noScroll) window.scrollTo({top:document.querySelector("nav.steps").offsetTop-8, behavior:"smooth"});
+}
+document.getElementById("btn-prev").onclick=function(){ go(state.cur-1); };
+document.getElementById("btn-next").onclick=function(){ go(state.cur+1); };
+
+
+/* ───────────── 복주머니 제비뽑기 ───────────── */
+function showScreen(which){
+  document.getElementById("s-draw").hidden = (which!=="draw");
+  document.getElementById("s-work").hidden = (which!=="work");
+  document.getElementById("rubric").hidden = (which!=="work");
+}
+function renderSlips(){
+  [0,1].forEach(function(i){
+    var el = document.getElementById("slip"+i), gi = state.picks[i];
+    if(gi===undefined){
+      el.className = "slip";
+      el.innerHTML = "<span class='q'>?</span><span class='no'>"+(i===0?"첫":"두")+" 번째</span>";
+    } else {
+      el.className = "slip filled";
+      el.innerHTML = "<b>"+STAGES[gi].name+"</b>";
+    }
+  });
+  var n = state.picks.length;
+  document.getElementById("drawmsg").textContent =
+    n===0 ? "복주머니를 눌러 첫 번째 단계를 뽑으세요."
+  : n===1 ? "한 번 더 눌러 두 번째 단계를 뽑으세요."
+          : (state.drawn ? "이 두 단계를 맡았어요. 아래 버튼을 눌러 작업 화면으로 돌아가세요."
+                         : "두 단계를 모두 뽑았어요. 아래 버튼을 눌러 시작하세요.");
+  document.getElementById("bag").disabled = (n>=2);
+  document.getElementById("btn-start").disabled = (n<2);
+  document.getElementById("btn-redraw").style.display = state.drawn ? "none" : "";
+  document.getElementById("btn-start").textContent =
+    state.drawn ? "작업 화면으로 돌아가기 →" : "이 두 단계로 모형 만들기 →";
+}
+document.getElementById("bag").addEventListener("click", function(){
+  if(state.picks.length>=2) return;
+  var bag=this;
+  bag.classList.add("shaking"); bag.disabled=true;
+  setTimeout(function(){
+    bag.classList.remove("shaking");
+    var pool=[0,1,2,3,4].filter(function(i){ return state.picks.indexOf(i)<0; });
+    state.picks.push(pool[Math.floor(Math.random()*pool.length)]);
+    navSig=""; renderSlips(); save();
+  }, 620);
+});
+document.getElementById("btn-redraw").onclick=function(){
+  state.picks=[]; state.cur=0; navSig=""; renderSlips(); save();
+};
+document.getElementById("btn-bag").onclick=function(){
+  renderSlips(); showScreen("draw");
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+document.getElementById("btn-start").onclick=function(){
+  if(state.picks.length<2) return;
+  state.drawn=true; state.mode="random2"; state.cur=0;
+  navSig=""; showScreen("work"); go(0,true); drawSteps(); save();
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+
+/* 이름 등 */
+["cls","no","name"].forEach(function(k){
+  var el=document.getElementById("m-"+k);
+  el.addEventListener("input", function(){ state.meta[k]=el.value; syncSegs(); save(); });
+});
+
+/* 비교표 */
+(function buildCmp(){
+  var tb=document.getElementById("cmpbody");
+  CMP_ROWS.forEach(function(r,i){
+    var tr=document.createElement("tr");
+    var th=document.createElement("th"); th.className="rowh"; th.textContent=r.k; tr.appendChild(th);
+    [0,1].forEach(function(j){
+      var td=document.createElement("td");
+      var ta=document.createElement("textarea");
+      ta.placeholder = j===0 ? r.ph1 : r.ph2;
+      ta.addEventListener("input", function(){ state.cmp[i][j]=ta.value; save(); });
+      ta.dataset.i=i; ta.dataset.j=j;
+      td.appendChild(ta); tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+})();
+function fillCmpInputs(){
+  Array.prototype.forEach.call(document.querySelectorAll("#cmpbody textarea"), function(ta){
+    ta.value = state.cmp[ta.dataset.i][ta.dataset.j] || "";
+  });
+}
+
+function normalize(){
+  state.mode="random2";
+  if(!state.picks) state.picks=[];
+  if(state.picks.length>2) state.picks=state.picks.slice(0,2);
+  if(state.drawn && state.picks.length<2) state.picks=pickTwo();
+  state.cellType="plant";
+  STAGES.forEach(function(st){
+    var s = state.stages[st.id];
+    if(!s){ state.stages[st.id]=blankStage(); return; }
+    if(!s.texts) s.texts = [s.text||"","",""];
+    while(s.texts.length<3) s.texts.push("");
+    if(s.cyto==="on") s.cyto="done";
+    s.objs = (s.objs||[]).map(function(o){
+      if(o.type==="chromatinDup") o.type="chromatin";
+      return o;
+    });
+    if(!s.cyto) s.cyto="none";
+  });
+}
+
+/* ───────────── 저장(있으면 사용) ───────────── */
+var saveTimer=null;
+function save(){
+  if(typeof window.storage === "undefined" || !window.storage) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(function(){
+    try {
+      var r = window.storage.set("mitosis-report", JSON.stringify(state));
+      if(r && r.catch) r.catch(function(){});
+    } catch(err){}
+  }, 500);
+}
+function load(){
+  if(typeof window.storage === "undefined" || !window.storage){
+    renderSlips(); showScreen("draw"); go(0,true); fillCmpInputs(); return;
+  }
+  window.storage.get("mitosis-report").then(function(res){
+    if(res && res.value){
+      try{
+        var s=JSON.parse(res.value);
+        if(s && s.stages){ state=s; }
+        normalize();
+        var mx=0;
+        STAGES.forEach(function(st){ state.stages[st.id].objs.forEach(function(o){ mx=Math.max(mx,o.id); }); });
+        uid=mx+1;
+      }catch(err){}
+    }
+    document.getElementById("m-cls").value=state.meta.cls||"";
+    document.getElementById("m-no").value=state.meta.no||"";
+    document.getElementById("m-name").value=state.meta.name||"";
+    fillCmpInputs(); renderSlips();
+    showScreen(state.drawn ? "work" : "draw");
+    go(state.cur||0, true);
+  }).catch(function(){ renderSlips(); showScreen("draw"); go(0,true); fillCmpInputs(); });
+}
+
+document.getElementById("btn-reset").onclick=function(){
+  if(!confirm("모든 단계의 모형과 글이 지워집니다. 계속할까요?")) return;
+  state=blankState(); uid=1; sel=null; navSig="";
+  ["cls","no","name"].forEach(function(k){ document.getElementById("m-"+k).value=""; });
+  fillCmpInputs(); renderSlips(); showScreen("draw"); go(0,true);
+  window.scrollTo({top:0, behavior:"smooth"});
+  if(typeof window.storage!=="undefined" && window.storage){ try{ window.storage.delete("mitosis-report"); }catch(e){} }
+};
+
+/* ───────────── 보고서 PNG ───────────── */
+var F = function(w,s){ return w+" "+s+'px "Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif'; };
+
+function wrap(ctx, text, maxW){
+  var out=[], paras=String(text||"").split("\n");
+  paras.forEach(function(p){
+    if(p===""){ out.push(""); return; }
+    var line="";
+    for(var i=0;i<p.length;i++){
+      var t=line+p[i];
+      if(ctx.measureText(t).width>maxW && line){ out.push(line); line=p[i]; }
+      else line=t;
+    }
+    out.push(line);
+  });
+  return out;
+}
+
+function buildReport(){
+  var RW=1000, M=40, m=document.createElement("canvas").getContext("2d");
+  var bodyW = RW-2*M;
+  var cellW = 330, gap=26;
+  var textW = bodyW - cellW - gap;
+
+  // 1) 높이 계산
+  m.font=F(400,17);
+  var panels = activeIdx().map(function(gi){
+    var st=STAGES[gi], s=state.stages[st.id];
+    var items=[], nLines=0;
+    s.texts.forEach(function(t,i){
+      if(!t.trim()) return;
+      var ls = wrap(m, t.trim(), textW-30);
+      items.push({ m:MARK[i], lines:ls });
+      nLines += ls.length;
+    });
+    if(!items.length){ items=[{ m:"", lines:["(작성하지 않음)"] }]; nLines=1; }
+    var h = Math.max(cellW*(H/W)+108, nLines*28 + items.length*10 + 104);
+    return { st:st, s:s, items:items, h:h };
+  });
+  m.font=F(400,16);
+  var rows = CMP_ROWS.map(function(r,i){
+    var l1 = wrap(m, state.cmp[i][0]||"", 330), l2 = wrap(m, state.cmp[i][1]||"", 330);
+    return { k:r.k, l1:l1, l2:l2, h: Math.max(46, Math.max(l1.length,l2.length)*24+22) };
+  });
+  var headH = 162;
+  var cmpH = 46 + rows.reduce(function(a,r){ return a+r.h; },0) + 46;
+  var total = headH + panels.reduce(function(a,p){return a+p.h;},0) + cmpH + 60;
+
+  var scale=2;
+  var cv=document.createElement("canvas");
+  cv.width=RW*scale; cv.height=Math.round(total*scale);
+  var g=cv.getContext("2d");
+  g.scale(scale,scale);
+  g.fillStyle="#ffffff"; g.fillRect(0,0,RW,total);
+
+  // 머리말
+  g.fillStyle=C.teal; g.fillRect(0,0,RW,6);
+  g.fillStyle=C.ink; g.font=F(700,29);
+  g.fillText("체세포 분열 모형 탐구 보고서", M, 58);
+  g.fillStyle=C.ink2; g.font=F(400,13.5);
+  g.fillText("[9과21-02] 체세포 분열 과정과 생식세포 형성과정의 특징을 염색체의 행동을 중심으로 설명할 수 있다.", M, 82);
+  g.font=F(400,16); g.fillStyle=C.ink;
+  var meta = "학년·반 "+(state.meta.cls||"____")+"   번호 "+(state.meta.no||"__")+"   이름 "+(state.meta.name||"________");
+  g.fillText(meta, M, 112);
+  g.font=F(400,13.5); g.fillStyle=C.teal;
+  g.fillText("모형 기준: 2n = 2 (어머니 유래 1개 · 아버지 유래 1개)", M, 132);
+  var d=new Date();
+  var dstr = d.getFullYear()+"."+("0"+(d.getMonth()+1)).slice(-2)+"."+("0"+d.getDate()).slice(-2);
+  g.font=F(400,14); g.fillStyle=C.ink2;
+  g.textAlign="right"; g.fillText(dstr+" 작성 · "+"식물세포 모형", RW-M, 112);
+  g.textAlign="left";
+  g.strokeStyle=C.line; g.lineWidth=1;
+  g.beginPath(); g.moveTo(M,144); g.lineTo(RW-M,144); g.stroke();
+
+  // 단계 패널
+  var y=headH;
+  panels.forEach(function(p){
+    g.fillStyle="#f6f8f9"; g.fillRect(M, y-16, bodyW, 30);
+    g.fillStyle=C.teal; g.fillRect(M, y-16, 4, 30);
+    g.fillStyle=C.ink; g.font=F(700,19);
+    g.fillText(p.st.name, M+14, y+5);
+
+    // 모형
+    var sc = cellW/W;
+    g.save();
+    g.translate(M, y+26); g.scale(sc,sc);
+    g.beginPath(); g.rect(0,0,W,H); g.clip();
+    drawScene(g, p.s, state.cellType, {guide:0});
+    g.restore();
+    g.strokeStyle=C.line; g.strokeRect(M, y+26, cellW, cellW*(H/W));
+
+    // 상태 요약
+    g.font=F(400,12.5); g.fillStyle=C.ink2;
+    var tags=[];
+    tags.push("핵막 "+(p.s.nuc===0?"없음":p.s.nuc+"개"));
+    tags.push("방추사 "+(p.s.spindle?"있음":"없음"));
+    if(p.s.cyto && p.s.cyto!=="none"){
+      tags.push((state.cellType==="plant" ? "세포판 " : "세포막 함입 ")
+                + (p.s.cyto==="done" ? "완성" : "형성 중"));
+    }
+    g.fillText(tags.join("  ·  "), M, y+26+cellW*(H/W)+18);
+
+    // 서술
+    var tx=M+cellW+gap, yy=y+48;
+    p.items.forEach(function(it){
+      if(it.m){
+        g.font=F(700,17); g.fillStyle=C.teal;
+        g.fillText(it.m, tx, yy);
+      }
+      g.font=F(400,17); g.fillStyle = it.m ? C.ink : "#a9b6c2";
+      it.lines.forEach(function(ln,i){ g.fillText(ln, tx+(it.m?30:0), yy+i*28); });
+      yy += it.lines.length*28 + 10;
+    });
+
+    g.strokeStyle="#e8edf1";
+    g.beginPath(); g.moveTo(M, y+p.h-30); g.lineTo(RW-M, y+p.h-30); g.stroke();
+    y += p.h;
+  });
+
+  // 비교표
+  g.fillStyle=C.ink; g.font=F(700,19);
+  g.fillText("체세포 분열과 생식세포 형성 과정(감수 분열) 비교", M, y+18);
+  y += 42;
+  var c1=M, w1=170, w2=(bodyW-w1)/2;
+  g.fillStyle="#e3f1ef"; g.fillRect(c1,y,bodyW,34);
+  g.fillStyle=C.teal; g.font=F(700,15);
+  g.fillText("구분", c1+12, y+23);
+  g.fillText("체세포 분열", c1+w1+12, y+23);
+  g.fillText("감수 분열", c1+w1+w2+12, y+23);
+  g.strokeStyle=C.line; g.strokeRect(c1,y,bodyW,34);
+  y+=34;
+  rows.forEach(function(r){
+    g.strokeStyle=C.line;
+    g.strokeRect(c1,y,w1,r.h); g.strokeRect(c1+w1,y,w2,r.h); g.strokeRect(c1+w1+w2,y,w2,r.h);
+    g.fillStyle="#f6f8f9"; g.fillRect(c1+1,y+1,w1-2,r.h-2);
+    g.fillStyle=C.ink; g.font=F(600,14.5); g.fillText(r.k, c1+12, y+27);
+    g.font=F(400,15); g.fillStyle=C.ink;
+    r.l1.forEach(function(ln,i){ g.fillText(ln, c1+w1+12, y+26+i*24); });
+    r.l2.forEach(function(ln,i){ g.fillText(ln, c1+w1+w2+12, y+26+i*24); });
+    y+=r.h;
+  });
+
+  g.font=F(400,12.5); g.fillStyle="#8c98a4";
+  g.fillText("2n = 2  ·  빨강 = 어머니에게서 온 염색체, 파랑 = 아버지에게서 온 염색체", M, y+28);
+  return cv;
+}
+
+document.getElementById("btn-png").onclick=function(){
+  var msg=document.getElementById("savemsg");
+  var empty = activeIdx().filter(function(gi){ return written(state.stages[STAGES[gi].id])<2; }).length;
+  var cv;
+  try { cv = buildReport(); }
+  catch(err){ msg.className="msg warn"; msg.textContent="이미지를 만들지 못했어요. 다시 한 번 눌러 주세요."; return; }
+  var name = (state.meta.cls?state.meta.cls+"_":"")+(state.meta.no?state.meta.no+"_":"")+(state.meta.name||"이름없음");
+  cv.toBlob(function(blob){
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");
+    a.href=url; a.download="체세포분열_보고서_"+name+".png";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+    msg.className = empty ? "msg warn" : "msg";
+    msg.textContent = empty ? "저장했어요. 특징을 2가지 이상 쓰지 않은 단계가 "+empty+"개 있어요." : "보고서 이미지를 저장했어요.";
+  }, "image/png");
+};
+
+/* 시작 */
+load();
+window.addEventListener("resize", function(){ render(); });
+})();
+</script>
+</body>
+</html>
