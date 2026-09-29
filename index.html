@@ -191,6 +191,8 @@
   }
   .save .primary:hover{background:#0d5d57}
   .save .ghost{font:inherit;font-size:13px;padding:9px 14px;border:1px solid var(--line);background:#fbfcfd;cursor:pointer;border-radius:2px}
+  .save .ghost:hover:not(:disabled){border-color:var(--teal);color:var(--teal)}
+  .save .ghost:disabled{opacity:.45;cursor:default}
   .save .msg{font-size:13px;color:var(--teal-strong,var(--teal))}
   .save .msg.warn{color:var(--warn)}
   .rubric{margin-top:12px;font-size:12.5px;color:var(--ink-2);background:var(--panel);border:1px solid var(--line);padding:12px 14px}
@@ -242,7 +244,6 @@
       <div class="slip" id="slip1"></div>
     </div>
     <div class="drawbtns">
-      <button type="button" class="again" id="btn-redraw">처음부터 다시 뽑기</button>
       <button type="button" class="go" id="btn-start" disabled>이 두 단계로 모형 만들기 →</button>
     </div>
     <p class="pool">간기 · 전기 · 중기 · 후기 · 말기 및 세포질 분열 &nbsp;다섯 장 중 두 장</p>
@@ -339,7 +340,9 @@
 
   <div class="save">
     <button type="button" class="primary" id="btn-png">보고서 이미지 저장 (PNG)</button>
-    <button type="button" class="ghost" id="btn-reset">전체 지우고 새로 시작</button>
+    <button type="button" class="ghost" id="btn-snap">임시저장</button>
+    <button type="button" class="ghost" id="btn-snapload" disabled>임시저장 불러오기</button>
+    <button type="button" class="ghost" id="btn-reset">전체 지우기</button>
     <span class="msg" id="savemsg"></span>
   </div>
 
@@ -896,7 +899,6 @@ function renderSlips(){
                          : "두 단계를 모두 뽑았어요. 아래 버튼을 눌러 시작하세요.");
   document.getElementById("bag").disabled = (n>=2);
   document.getElementById("btn-start").disabled = (n<2);
-  document.getElementById("btn-redraw").style.display = state.drawn ? "none" : "";
   document.getElementById("btn-start").textContent =
     state.drawn ? "작업 화면으로 돌아가기 →" : "이 두 단계로 모형 만들기 →";
 }
@@ -911,9 +913,6 @@ document.getElementById("bag").addEventListener("click", function(){
     navSig=""; renderSlips(); save();
   }, 620);
 });
-document.getElementById("btn-redraw").onclick=function(){
-  state.picks=[]; state.cur=0; navSig=""; renderSlips(); save();
-};
 document.getElementById("btn-bag").onclick=function(){
   renderSlips(); showScreen("draw");
   window.scrollTo({top:0, behavior:"smooth"});
@@ -976,47 +975,103 @@ function normalize(){
 
 /* ───────────── 저장(있으면 사용) ───────────── */
 var saveTimer=null;
+var KEY="mitosis-report", SNAP="mitosis-report-snap", SNAPAT="mitosis-report-snap-at";
+function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
 function save(){
-  if(typeof window.storage === "undefined" || !window.storage) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(function(){
-    try {
-      var r = window.storage.set("mitosis-report", JSON.stringify(state));
-      if(r && r.catch) r.catch(function(){});
-    } catch(err){}
+    var json = JSON.stringify(state);
+    lsSet(KEY, json);
+    if(typeof window.storage !== "undefined" && window.storage){
+      try {
+        var r = window.storage.set(KEY, json);
+        if(r && r.catch) r.catch(function(){});
+      } catch(err){}
+    }
   }, 500);
 }
+function applyLoaded(json){
+  try{
+    var s=JSON.parse(json);
+    if(s && s.stages){ state=s; }
+  }catch(err){ return; }
+  normalize();
+  var mx=0;
+  STAGES.forEach(function(st){ state.stages[st.id].objs.forEach(function(o){ mx=Math.max(mx,o.id); }); });
+  uid=mx+1;
+}
+function refreshAll(){
+  document.getElementById("m-cls").value=state.meta.cls||"";
+  document.getElementById("m-no").value=state.meta.no||"";
+  document.getElementById("m-name").value=state.meta.name||"";
+  sel=null; navSig="";
+  fillCmpInputs(); renderSlips();
+  showScreen(state.drawn ? "work" : "draw");
+  go(state.cur||0, true); drawSteps();
+  updateSnapBtn();
+}
+function updateSnapBtn(){
+  var b=document.getElementById("btn-snapload");
+  var has=!!lsGet(SNAP);
+  b.disabled=!has;
+  b.title = has ? (snapLabel()+"에 임시저장한 내용으로 되돌립니다.") : "임시저장한 내용이 없습니다.";
+}
+function snapLabel(){
+  var t=lsGet(SNAPAT);
+  if(!t) return "";
+  try{
+    var d=new Date(t);
+    return d.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+  }catch(e){ return ""; }
+}
 function load(){
+  var local = lsGet(KEY);
   if(typeof window.storage === "undefined" || !window.storage){
-    renderSlips(); showScreen("draw"); go(0,true); fillCmpInputs(); return;
+    if(local) applyLoaded(local);
+    refreshAll(); return;
   }
-  window.storage.get("mitosis-report").then(function(res){
-    if(res && res.value){
-      try{
-        var s=JSON.parse(res.value);
-        if(s && s.stages){ state=s; }
-        normalize();
-        var mx=0;
-        STAGES.forEach(function(st){ state.stages[st.id].objs.forEach(function(o){ mx=Math.max(mx,o.id); }); });
-        uid=mx+1;
-      }catch(err){}
-    }
-    document.getElementById("m-cls").value=state.meta.cls||"";
-    document.getElementById("m-no").value=state.meta.no||"";
-    document.getElementById("m-name").value=state.meta.name||"";
-    fillCmpInputs(); renderSlips();
-    showScreen(state.drawn ? "work" : "draw");
-    go(state.cur||0, true);
-  }).catch(function(){ renderSlips(); showScreen("draw"); go(0,true); fillCmpInputs(); });
+  window.storage.get(KEY).then(function(res){
+    if(res && res.value) applyLoaded(res.value);
+    else if(local) applyLoaded(local);
+    refreshAll();
+  }).catch(function(){ if(local) applyLoaded(local); refreshAll(); });
 }
 
+document.getElementById("btn-snap").onclick=function(){
+  var msg=document.getElementById("savemsg");
+  var ok = lsSet(SNAP, JSON.stringify(state));
+  if(!ok){
+    msg.className="msg warn";
+    msg.textContent="이 브라우저에서는 임시저장을 쓸 수 없어요. 보고서 이미지(PNG)로 저장해 주세요.";
+    return;
+  }
+  lsSet(SNAPAT, new Date().toISOString());
+  save(); updateSnapBtn();
+  msg.className="msg";
+  msg.textContent="임시저장했어요 ("+snapLabel()+"). 창을 닫았다 열어도 이어서 할 수 있어요.";
+};
+document.getElementById("btn-snapload").onclick=function(){
+  var json=lsGet(SNAP);
+  if(!json) return;
+  if(!confirm(snapLabel()+"에 임시저장한 내용으로 되돌립니다. 지금 화면의 모형과 글은 사라져요. 계속할까요?")) return;
+  applyLoaded(json); refreshAll(); save();
+  var msg=document.getElementById("savemsg");
+  msg.className="msg";
+  msg.textContent="임시저장한 내용을 불러왔어요 ("+snapLabel()+" 저장본).";
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+
 document.getElementById("btn-reset").onclick=function(){
-  if(!confirm("모든 단계의 모형과 글이 지워집니다. 계속할까요?")) return;
+  if(!confirm("모든 단계의 모형과 글, 임시저장한 내용까지 모두 지워집니다. 계속할까요?")) return;
   state=blankState(); uid=1; sel=null; navSig="";
   ["cls","no","name"].forEach(function(k){ document.getElementById("m-"+k).value=""; });
   fillCmpInputs(); renderSlips(); showScreen("draw"); go(0,true);
+  lsDel(KEY); lsDel(SNAP); lsDel(SNAPAT); updateSnapBtn();
+  document.getElementById("savemsg").textContent="";
   window.scrollTo({top:0, behavior:"smooth"});
-  if(typeof window.storage!=="undefined" && window.storage){ try{ window.storage.delete("mitosis-report"); }catch(e){} }
+  if(typeof window.storage!=="undefined" && window.storage){ try{ window.storage.delete(KEY); }catch(e){} }
 };
 
 /* ───────────── 보고서 PNG ───────────── */
